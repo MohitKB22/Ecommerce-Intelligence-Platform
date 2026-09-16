@@ -1,0 +1,84 @@
+name: Build
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  docker:
+    name: Build ${{ matrix.service }} image
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: backend
+            dockerfile: backend/Dockerfile
+          - service: frontend
+            dockerfile: frontend/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: false
+          load: true
+          tags: eci-${{ matrix.service }}:ci
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      - name: Verify the image starts
+        run: docker image inspect eci-${{ matrix.service }}:ci
+
+  compose:
+    name: Compose stack smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate compose configuration
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet
+
+      - name: Start the stack
+        run: |
+          cp .env.example .env
+          docker compose up -d --build postgres redis
+          docker compose up -d --build migrate
+          docker compose up -d --build backend
+
+      - name: Wait for the API to become healthy
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8000/api/v1/health/live >/dev/null 2>&1; then
+              echo "API is live"; exit 0
+            fi
+            sleep 5
+          done
+          echo "API did not become healthy in time"
+          docker compose logs backend
+          exit 1
+
+      - name: Exercise the public endpoints
+        run: |
+          curl -fsS http://localhost:8000/api/v1/health | tee /dev/stderr
+          curl -fsS "http://localhost:8000/api/v1/products?page_size=3" >/dev/null
+          curl -fsS "http://localhost:8000/api/v1/search?q=wireless" >/dev/null
+          curl -fsS http://localhost:8000/openapi.json >/dev/null
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

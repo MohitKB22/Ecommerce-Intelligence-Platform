@@ -1,0 +1,49 @@
+# Development overlay: hot reload, source mounted, debug logging.
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+name: ecommerce-intelligence
+
+services:
+  backend:
+    environment:
+      ENVIRONMENT: development
+      LOG_LEVEL: DEBUG
+      LOG_JSON: "false"
+      DEBUG: "true"
+      RATE_LIMIT_ENABLED: "false"
+    volumes:
+      - ./backend:/app/backend
+      - ./ml:/app/ml
+      - ./scripts:/app/scripts
+      - model_data:/app/ml/models
+      - seed_data:/app/data
+    command:
+      ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000",
+       "--app-dir", "/app/backend", "--reload", "--reload-dir", "/app/backend"]
+
+  worker:
+    environment:
+      LOG_LEVEL: DEBUG
+      LOG_JSON: "false"
+    volumes:
+      - ./backend:/app/backend
+      - ./ml:/app/ml
+      - model_data:/app/ml/models
+      - seed_data:/app/data
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.dev
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+    environment:
+      VITE_PROXY_TARGET: http://backend:8000
+    ports:
+      - "3000:3000"
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+volumes:
+  model_data:
+  seed_data:

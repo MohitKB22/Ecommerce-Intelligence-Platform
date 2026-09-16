@@ -1,0 +1,10 @@
+# Optional accelerators. The project runs fully without these; install them to
+# swap in stronger models where the hardware allows.
+
+# Transformer sentence embeddings for semantic search / content similarity.
+# Enable with EMBEDDING_BACKEND=sentence-transformers
+sentence-transformers==3.1.1
+
+# Gradient boosting alternatives to scikit-learn's HistGradientBoosting.
+xgboost==2.1.1
+lightgbm==4.5.0

@@ -1,0 +1,23 @@
+line-length = 118
+target-version = "py310"
+exclude = ["alembic/versions", "__pycache__", ".venv"]
+
+[lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RET", "ARG", "PTH", "ERA"]
+ignore = [
+    "E501",    # line length is handled by the formatter
+    "B008",    # FastAPI Depends() in defaults is the documented pattern
+    "N803",    # ML conventions use capital X for matrices
+    "N806",
+    "RET504",  # a named result before return is often clearer
+    "ARG001",  # unused args are common in framework callbacks
+    "ARG002",
+    "SIM108",  # ternaries are not always more readable
+    "B905",    # zip(strict=) - the paired sequences here are constructed together
+    "SIM105",  # contextlib.suppress is not clearer for one-line probes
+    "ARG004",  # unused args on framework-facing static methods
+]
+
+[lint.per-file-ignores]
+"tests/**" = ["ARG", "N", "ERA", "SIM"]
+"__init__.py" = ["F401"]
