@@ -61,6 +61,29 @@ def _bulk(session, model, rows: list[dict], label: str) -> int:
     return total
 
 
+def _sync_id_sequences(session, models) -> None:
+    """Advance PostgreSQL id sequences past the explicitly-inserted seed ids.
+
+    The seed writes rows with fixed primary keys, which does not move the
+    SERIAL/IDENTITY sequences. Without this, the first row the running app
+    inserts (a search log, an event, a review, an order) gets id=1 and fails
+    with a duplicate-key error. SQLite derives the next rowid from MAX(id), so
+    it needs nothing.
+    """
+    from sqlalchemy import text
+
+    if session.get_bind().dialect.name != "postgresql":
+        return
+    for model in models:
+        table = model.__table__.name
+        session.execute(text(
+            f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), "
+            f"COALESCE((SELECT MAX(id) FROM {table}), 0) + 1, false)"
+        ))
+    session.commit()
+    logger.info("seed_sequences_synced", tables=len(models))
+
+
 def reset_schema() -> None:
     logger.warning("dropping_all_tables")
     Base.metadata.drop_all(bind=engine)
@@ -176,6 +199,9 @@ def seed(cfg: GeneratorConfig, reset: bool, export_csv: bool = True) -> dict:
             for r in ds.impressions.itertuples()
         ], "recommendations")
 
+        _sync_id_sequences(session, [Category, Brand, Product, User, Order, OrderItem, Review, UserEvent,
+                                     SearchEvent, RecommendationLog])
+
         if export_csv:
             seed_dir = REPO_ROOT / "data" / "seed"
             seed_dir.mkdir(parents=True, exist_ok=True)
@@ -191,7 +217,7 @@ def seed(cfg: GeneratorConfig, reset: bool, export_csv: bool = True) -> dict:
             logger.info("seed_artifacts_written", path=str(seed_dir))
 
         summary["admin_email"] = settings.ADMIN_EMAIL
-        logger.info("seed_complete", **{k: v for k, v in summary.items() if isinstance(v, (int, str))})
+        logger.info("seed_complete", **{k: v for k, v in summary.items() if isinstance(v, int | str)})
         return summary
     finally:
         session.close()

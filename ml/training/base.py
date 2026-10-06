@@ -208,7 +208,7 @@ class TrainingPipeline(ABC):
 
 
 def _flat(metrics: dict[str, Any]) -> dict[str, Any]:
-    return {k: v for k, v in metrics.items() if isinstance(v, (int, float, str))}
+    return {k: v for k, v in metrics.items() if isinstance(v, int | float | str)}
 
 
 def run_cli(pipeline_cls: type[TrainingPipeline], description: str) -> int:

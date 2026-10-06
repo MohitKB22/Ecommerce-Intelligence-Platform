@@ -165,22 +165,20 @@ class TestProducts:
         after = client.get(f"/api/v1/products/{sample_product_id}").json()["rating_count"]
         assert after == before + 1
 
-    def test_duplicate_review_is_a_conflict_not_a_crash(self, client, db, sample_product_id):
+    def test_duplicate_review_is_a_conflict_not_a_crash(self, client, db):
         """A uniqueness violation must surface as 409, never as an unhandled 500."""
         from sqlalchemy import select
 
         from app.models import Review
 
-        row = db.execute(
-            select(Review.user_id).where(Review.product_id == sample_product_id).limit(1)
-        ).first()
-        if row is None:
-            import pytest as _pytest
-
-            _pytest.skip("no existing review for this product")
+        # Use any existing review rather than one for the first product, which
+        # has no reviews on some generated datasets (the test used to skip).
+        row = db.execute(select(Review.product_id, Review.user_id).order_by(Review.id).limit(1)).first()
+        assert row is not None, "the seeded dataset should contain reviews"
+        product_id, user_id = int(row[0]), int(row[1])
         response = client.post(
-            f"/api/v1/products/{sample_product_id}/reviews",
-            json={"product_id": sample_product_id, "user_id": int(row[0]), "rating": 4,
+            f"/api/v1/products/{product_id}/reviews",
+            json={"product_id": product_id, "user_id": user_id, "rating": 4,
                   "title": "Again", "body": "Trying to review the same product twice."},
         )
         assert response.status_code == 409

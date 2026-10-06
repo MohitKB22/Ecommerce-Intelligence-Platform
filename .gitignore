@@ -43,6 +43,9 @@ data/processed/*
 !data/processed/.gitkeep
 ml/models/*
 !ml/models/.gitkeep
+# regenerated (and date-dependent) by scripts/seed_database.py on every seed
+data/seed/*
+!data/seed/.gitkeep
 
 # ---- os / editor ----
 .DS_Store
@@ -55,3 +58,6 @@ Thumbs.db
 # ---- build output ----
 *.log
 .cache/
+*.tsbuildinfo
+# vite leaves these behind when loading vite.config.ts is interrupted
+vite.config.ts.timestamp-*.mjs

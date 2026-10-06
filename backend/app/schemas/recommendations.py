@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.catalog import ProductSummary
 
@@ -19,6 +19,9 @@ class RecommendationItem(BaseModel):
 
 
 class RecommendationResponse(BaseModel):
+    # `model_version` / `model_type` are API fields, not pydantic internals.
+    model_config = ConfigDict(protected_namespaces=())
+
     items: list[RecommendationItem]
     strategy: str = Field(..., description="hybrid | cold_start | trending_events | popularity_fallback | ...")
     model_version: str

@@ -121,9 +121,31 @@ def check_structure(report: Report) -> None:
         report.add("Configuration template complete", not absent, True,
                    f"missing keys: {', '.join(absent)}" if absent else f"{len(needed)} keys present")
 
-    # A committed .env would leak secrets.
-    report.add("No committed .env file", not (REPO_ROOT / ".env").is_file(), True,
-               "found a .env in the repository root" if (REPO_ROOT / ".env").is_file() else "clean")
+    # A committed .env would leak secrets. A local, git-ignored .env is the
+    # documented setup (`cp .env.example .env`), so only fail when git tracks it.
+    tracked = _git_tracks(".env")
+    if tracked is None:  # not a git checkout (e.g. inside a Docker image)
+        report.add("No committed .env file", True, True, "not a git checkout - skipped")
+    else:
+        report.add("No committed .env file", not tracked, True,
+                   ".env is tracked by git - run: git rm --cached .env" if tracked else "clean")
+
+
+def _git_tracks(relative_path: str) -> bool | None:
+    """True/False if git does/doesn't track the path, None when git is unavailable."""
+    import shutil
+    import subprocess
+
+    if shutil.which("git") is None or not (REPO_ROOT / ".git").exists():
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", relative_path],
+            cwd=REPO_ROOT, capture_output=True, text=True, timeout=15, check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return result.returncode == 0
 
 
 def check_code_quality(report: Report) -> None:

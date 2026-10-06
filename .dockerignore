@@ -1,0 +1,33 @@
+# Keep the build context small and platform-neutral. Without this, a local
+# `frontend/node_modules` (macOS binaries for esbuild/rollup) is copied over the
+# Linux one installed by `npm ci` inside the image and the frontend build fails.
+.git
+.github
+**/.DS_Store
+.env
+.env.*
+!.env.example
+
+# python
+.venv
+venv
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+coverage.xml
+htmlcov
+
+# node
+**/node_modules
+frontend/dist
+frontend/*.tsbuildinfo
+frontend/vite.config.ts.timestamp-*.mjs
+
+# local data and trained models (compose mounts volumes for these)
+data/*.db
+data/*.sqlite*
+data/seed/*
+ml/models/*

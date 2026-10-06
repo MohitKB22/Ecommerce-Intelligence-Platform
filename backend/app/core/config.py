@@ -7,12 +7,11 @@ stack is runnable with zero external services.
 """
 from __future__ import annotations
 
-import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # repo_root/backend/app/core/config.py -> repo_root
@@ -95,6 +94,20 @@ class Settings(BaseSettings):
     def _upper(cls, v: str) -> str:
         return v.upper()
 
+    @model_validator(mode="after")
+    def _anchor_relative_paths(self) -> Settings:
+        """Resolve relative paths from `.env` against the repository root.
+
+        `.env.example` uses `./data/...` and `./ml/models`. Left as-is they resolve
+        against the *current working directory*, so starting the API from
+        `backend/` silently created a second, empty database and could not find
+        the trained models. Anchoring them makes every entry point agree.
+        """
+        self.DATABASE_URL = _anchor_sqlite_url(self.DATABASE_URL)
+        self.MODEL_PATH = str(_anchor_path(self.MODEL_PATH))
+        self.DATA_PATH = str(_anchor_path(self.DATA_PATH))
+        return self
+
     # ---- derived -----------------------------------------------------
     @property
     def cors_origins(self) -> list[str]:
@@ -169,6 +182,23 @@ class Settings(BaseSettings):
         return problems
 
 
+def _anchor_path(value: str) -> Path:
+    path = Path(value).expanduser()
+    return path if path.is_absolute() else (REPO_ROOT / path).resolve()
+
+
+def _anchor_sqlite_url(url: str) -> str:
+    """`sqlite:///./data/x.db` -> `sqlite:////abs/repo/data/x.db`; other URLs untouched."""
+    scheme, sep, rest = url.partition(":///")
+    if not sep or not scheme.startswith("sqlite"):
+        return url
+    path, query_sep, query = rest.partition("?")
+    if not path or path == ":memory:" or path.startswith("file:"):
+        return url
+    anchored = _anchor_path(path)
+    return f"{scheme}:///{anchored.as_posix()}{query_sep}{query}"
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     return Settings()
@@ -180,7 +210,3 @@ def reset_settings_cache() -> None:
 
 
 settings = get_settings()
-
-# Honour an explicit test flag so pytest never touches a developer database.
-if os.getenv("PYTEST_CURRENT_TEST") and os.getenv("ENVIRONMENT") is None:
-    pass
