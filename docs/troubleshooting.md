@@ -1,5 +1,20 @@
 # Troubleshooting
 
+## Installation
+
+**`error: externally-managed-environment`** (macOS Homebrew Python, recent Linux)
+The system interpreter refuses `pip install` (PEP 668). `make install` creates
+`.venv/` and installs there; every other `make` target then uses `.venv/bin/python`.
+If you prefer your own environment, activate it first and `make` will use it.
+
+**`No matching distribution found for numpy==2.1.1`** (or pandas/scipy)
+The interpreter is too old. Apple's `/usr/bin/python3` is 3.9; this project
+needs 3.10 - 3.14. Install one (`brew install python@3.12`), delete any
+half-built `.venv/`, and run `make install` again.
+
+**`.venv` was created with the wrong Python**
+`rm -rf .venv && make install PYTHON_CANDIDATES=python3.12`
+
 ## Startup
 
 **`RuntimeError: Refusing to start in production with insecure configuration`**

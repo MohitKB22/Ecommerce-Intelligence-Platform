@@ -100,9 +100,11 @@ class TestShoppingJourney:
         assert refined["total"] > 0
 
     def test_typo_is_corrected_end_to_end(self, client):
-        catalogue = client.get("/api/v1/search", params={"q": ""}).json()
-        title = catalogue["hits"][0]["product"]["title"]
-        word = next((w for w in title.lower().split() if len(w) > 6), None)
+        catalogue = client.get("/api/v1/search", params={"q": "", "page_size": 50}).json()
+        # Look across the whole first page: the top hit alone sometimes has only
+        # short words, which used to skip this test on some days.
+        word = next((w for hit in catalogue["hits"] for w in hit["product"]["title"].lower().split()
+                     if len(w) > 6 and w.isalpha()), None)
         if not word:
             pytest.skip("no sufficiently long token to corrupt")
         typo = word[:-2] + word[-1]  # drop a character near the end
@@ -137,7 +139,7 @@ class TestAdminJourney:
         ai = client.get("/api/v1/analytics/ai", headers=admin_headers).json()
         for block in (ai["recommendation"], ai["search"]):
             for key, value in block.items():
-                if key.endswith(("ctr", "rate")) and isinstance(value, (int, float)):
+                if key.endswith(("ctr", "rate")) and isinstance(value, int | float):
                     assert 0.0 <= value <= 1.0, f"{key}={value} is not a valid rate"
 
     def test_model_reload_is_idempotent(self, client, admin_headers):

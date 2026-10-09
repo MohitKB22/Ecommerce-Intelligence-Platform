@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AspectSentiment(BaseModel):
@@ -37,6 +37,9 @@ class SentimentRequest(BaseModel):
 
 
 class SentimentResult(BaseModel):
+    # `model_version` / `model_type` are API fields, not pydantic internals.
+    model_config = ConfigDict(protected_namespaces=())
+
     label: str
     score: float
     aspects: dict[str, str] = Field(default_factory=dict)
@@ -56,6 +59,9 @@ class ForecastPoint(BaseModel):
 
 
 class ForecastResponse(BaseModel):
+    # `model_version` / `model_type` are API fields, not pydantic internals.
+    model_config = ConfigDict(protected_namespaces=())
+
     product_id: int
     product_title: str
     horizon_days: int
@@ -78,6 +84,9 @@ class FeatureContribution(BaseModel):
 
 
 class PricePredictionResponse(BaseModel):
+    # `model_version` / `model_type` are API fields, not pydantic internals.
+    model_config = ConfigDict(protected_namespaces=())
+
     product_id: int
     product_title: str
     current_price: float
@@ -110,6 +119,9 @@ class SegmentSummary(BaseModel):
 
 
 class SegmentOverview(BaseModel):
+    # `model_version` / `model_type` are API fields, not pydantic internals.
+    model_config = ConfigDict(protected_namespaces=())
+
     available: bool
     model_version: str | None = None
     total_customers: int = 0

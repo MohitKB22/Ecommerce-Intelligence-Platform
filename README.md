@@ -111,7 +111,7 @@ popularity-ranked results rather than erroring.
 ## Tech stack
 
 **Frontend** React 18 · TypeScript · Vite · Tailwind CSS · React Router · TanStack Query · Recharts · Lucide
-**Backend** Python 3.11 · FastAPI · Pydantic v2 · SQLAlchemy 2 · Alembic · PostgreSQL · Redis · Celery
+**Backend** Python 3.10–3.14 (3.11 in Docker/CI) · FastAPI · Pydantic v2 · SQLAlchemy 2 · Alembic · PostgreSQL · Redis · Celery
 **ML** NumPy · pandas · scikit-learn · SciPy · joblib (XGBoost/LightGBM/sentence-transformers optional)
 **Infra** Docker · Docker Compose · Nginx · GitHub Actions
 
@@ -141,9 +141,13 @@ your `.env` (default `admin@ecommerce-intelligence.local` / `admin-change-me`).
 
 ### Local, without Docker
 
+Requires Python 3.10 - 3.14 and Node 20+. `make install` creates a project
+virtualenv in `.venv/` (so it never touches the system or Homebrew Python) and
+every other `make` target uses it automatically.
+
 ```bash
 cp .env.example .env
-make install          # backend + frontend dependencies
+make install          # .venv + backend deps, and frontend deps
 
 make seed             # generate and load the synthetic dataset
 make train            # train all five models (~30s)
@@ -315,6 +319,8 @@ ecommerce-intelligence/
 |---|---|
 | `model_unavailable` from an endpoint | `make train` |
 | Empty storefront | `make seed` |
+| `error: externally-managed-environment` from pip | use `make install` (installs into `.venv/`), or create and activate a virtualenv first |
+| `No matching distribution found for numpy==...` | your `python3` is too old (Apple's is 3.9) — `brew install python@3.12`, then `make install` |
 | `sqlite3.OperationalError: disk I/O error` | filesystem lacks locking — point `DATABASE_URL` at a local disk |
 | Frontend cannot reach the API | check the backend is on :8000 and `CORS_ORIGINS` includes your origin |
 | Port already allocated | change `FRONTEND_PORT` / `BACKEND_PORT` in `.env` |

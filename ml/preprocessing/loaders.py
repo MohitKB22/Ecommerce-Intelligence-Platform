@@ -37,7 +37,7 @@ def load_products(engine: Engine) -> pd.DataFrame:
 
 
 def _coerce_json(value):
-    if isinstance(value, (list, dict)) or value is None:
+    if isinstance(value, list | dict) or value is None:
         return value
     import json
 

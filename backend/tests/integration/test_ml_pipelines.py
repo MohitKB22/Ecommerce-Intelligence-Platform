@@ -119,14 +119,34 @@ class TestInference:
         assert "battery_life" in result["aspects"] or "comfort" in result["aspects"]
 
     def test_sentiment_separates_clear_polarity(self, models, db):
+        """Unambiguous reviews written in the corpus' own vocabulary must be ordered correctly.
+
+        The compact test corpus is ~300 reviews and is regenerated relative to
+        today's date, so one hand-written out-of-vocabulary sentence per class
+        flipped on some days. Comparing the mean score over every opener/closer
+        pairing tests the same property without depending on a single draw.
+        """
         from app.sentiment.service import SentimentService
 
+        from ml.datasets.taxonomy import (
+            ASPECT_LEXICON,
+            REVIEW_CLOSERS_NEG,
+            REVIEW_CLOSERS_POS,
+            REVIEW_OPENERS_NEG,
+            REVIEW_OPENERS_POS,
+        )
+
         service = SentimentService(db)
-        positive = service.analyse_text(
-            "Absolutely superb. Outstanding value, brilliant build quality, would recommend to anyone.")
-        negative = service.analyse_text(
-            "Broke within a week. Terrible build quality, overpriced, and it stopped working entirely.")
-        assert positive["score"] > negative["score"]
+
+        def mean_score(openers, closers, polarity):
+            phrases = [ASPECT_LEXICON[a][polarity][0] for a in ("value", "build_quality", "durability")]
+            texts = [f"{o} {p.capitalize()}. {c}" for o in openers for c in closers for p in phrases]
+            return sum(service.analyse_text(t)["score"] for t in texts) / len(texts)
+
+        positive = mean_score(REVIEW_OPENERS_POS, REVIEW_CLOSERS_POS, "positive")
+        negative = mean_score(REVIEW_OPENERS_NEG, REVIEW_CLOSERS_NEG, "negative")
+        assert positive > 0.0 > negative
+        assert positive > negative
 
     def test_product_sentiment_aggregation(self, models, db, sample_product_id):
         from app.sentiment.service import SentimentService

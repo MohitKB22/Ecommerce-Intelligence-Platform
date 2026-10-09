@@ -1,16 +1,24 @@
+# Supported Python: 3.10 - 3.14. Pins are exact for reproducible builds; the
+# few packages whose pinned release has no Python 3.14 wheels get a second,
+# newer pin for 3.14+ so `pip install` never has to compile from source.
+
 # ---- web framework -------------------------------------------------------
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
-pydantic==2.9.2
+pydantic==2.9.2 ; python_version < "3.14"
+pydantic==2.12.0 ; python_version >= "3.14"
 pydantic-settings==2.5.2
 python-multipart==0.0.9
 email-validator==2.2.0
-orjson==3.10.7
+orjson==3.10.7 ; python_version < "3.14"
+orjson==3.11.4 ; python_version >= "3.14"
 
 # ---- database ------------------------------------------------------------
-SQLAlchemy==2.0.35
+SQLAlchemy==2.0.35 ; python_version < "3.14"
+SQLAlchemy==2.0.44 ; python_version >= "3.14"   # 2.0.35 cannot build mappers on 3.14
 alembic==1.13.3
-psycopg[binary]==3.2.2          # PostgreSQL driver (SQLite needs no driver)
+psycopg[binary]==3.2.2 ; python_version < "3.14"     # PostgreSQL driver (SQLite needs no driver)
+psycopg[binary]==3.2.10 ; python_version >= "3.14"
 
 # ---- cache / queue -------------------------------------------------------
 redis==5.1.1
@@ -23,8 +31,12 @@ python-jose[cryptography]==3.3.0
 structlog==24.4.0
 
 # ---- machine learning ----------------------------------------------------
-numpy==2.1.1
-pandas==2.2.3
-scipy==1.14.1
-scikit-learn==1.5.2
+numpy==2.1.1 ; python_version < "3.14"
+numpy==2.3.2 ; python_version >= "3.14"
+pandas==2.2.3 ; python_version < "3.14"
+pandas==2.3.3 ; python_version >= "3.14"
+scipy==1.14.1 ; python_version < "3.14"
+scipy==1.16.1 ; python_version >= "3.14"
+scikit-learn==1.5.2 ; python_version < "3.14"
+scikit-learn==1.7.2 ; python_version >= "3.14"
 joblib==1.4.2
